@@ -1,168 +1,168 @@
-"""
-AI Image Generation Service
-============================
-Handles AI-powered room visualization using Replicate's Interior Design model.
-"""
-import replicate
-import os
-import tempfile
-import requests
-import logging
-from typing import List
-from ai_backend.models import FurnitureItem
-from ai_backend.config import (
-    REPLICATE_API_TOKEN,
-    DEFAULT_IMAGE_STRENGTH,
-    DEFAULT_GUIDANCE_SCALE,
-    DEFAULT_INFERENCE_STEPS
-)
-logger = logging.getLogger(__name__)
-# Set Replicate API token
-os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
+# """
+# AI Image Generation Service
+# ============================
+# Handles AI-powered room visualization using Replicate's Interior Design model.
+# """
+# import replicate
+# import os
+# import tempfile
+# import requests
+# import logging
+# from typing import List
+# from ai_backend.models import FurnitureItem
+# from ai_backend.config import (
+#     REPLICATE_API_TOKEN,
+#     DEFAULT_IMAGE_STRENGTH,
+#     DEFAULT_GUIDANCE_SCALE,
+#     DEFAULT_INFERENCE_STEPS
+# )
+# logger = logging.getLogger(__name__)
+# # Set Replicate API token
+# os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
 
-def generate_room_with_furniture(
-    room_image_bytes: bytes,
-    prompt: str,
-    theme: str,
-    furniture_items: List[FurnitureItem]
-) -> str:
-    """
-    Generate room image with furniture using Replicate Interior Design model
+# def generate_room_with_furniture(
+#     room_image_bytes: bytes,
+#     prompt: str,
+#     theme: str,
+#     furniture_items: List[FurnitureItem]
+# ) -> str:
+#     """
+#     Generate room image with furniture using Replicate Interior Design model
    
-    Uses adirik/interior-design for better room redesign with preservation of layout.
+#     Uses adirik/interior-design for better room redesign with preservation of layout.
    
-    Args:
-        room_image_bytes: Original room photo bytes
-        prompt: User placement instructions
-        theme: Design theme
-        furniture_items: List of selected furniture
+#     Args:
+#         room_image_bytes: Original room photo bytes
+#         prompt: User placement instructions
+#         theme: Design theme
+#         furniture_items: List of selected furniture
    
-    Returns:
-        Path to generated image file (temporary)
+#     Returns:
+#         Path to generated image file (temporary)
        
-    Raises:
-        Exception: If generation fails
-    """
+#     Raises:
+#         Exception: If generation fails
+#     """
    
-    # Save room image to temp file
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_room:
-        temp_room.write(room_image_bytes)
-        room_image_path = temp_room.name
+#     # Save room image to temp file
+#     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_room:
+#         temp_room.write(room_image_bytes)
+#         room_image_path = temp_room.name
    
-    logger.info(f"📁 Room image saved to: {room_image_path}")
+#     logger.info(f"📁 Room image saved to: {room_image_path}")
    
-    try:
-        # Build detailed prompt
-        furniture_desc = ", ".join([f"{item.name} ({furniture_item['subtype'] if 'subtype' in furniture_item else ''})" for item in furniture_items[:5]])  # Max 5 for token limits
+#     try:
+#         # Build detailed prompt
+#         furniture_desc = ", ".join([f"{item.name} ({furniture_item['subtype'] if 'subtype' in furniture_item else ''})" for item in furniture_items[:5]])  # Max 5 for token limits
        
-        full_prompt = _build_generation_prompt(
-            theme=theme,
-            furniture_desc=furniture_desc,
-            user_prompt=prompt
-        )
+#         full_prompt = _build_generation_prompt(
+#             theme=theme,
+#             furniture_desc=furniture_desc,
+#             user_prompt=prompt
+#         )
        
-        negative_prompt = _build_negative_prompt()
+#         negative_prompt = _build_negative_prompt()
        
-        logger.info(f"🎨 Generating image...")
-        logger.info(f" Prompt: {full_prompt[:150]}...")
-        logger.info(f" Theme: {theme}")
-        logger.info(f" Furniture items: {len(furniture_items)}")
+#         logger.info(f"🎨 Generating image...")
+#         logger.info(f" Prompt: {full_prompt[:150]}...")
+#         logger.info(f" Theme: {theme}")
+#         logger.info(f" Furniture items: {len(furniture_items)}")
        
-        # Generate using adirik/interior-design model (img2img inpainting for interior)
-        output = replicate.run(
-            "adirik/interior-design:1b976f591a902eb9f897c7c7df9a681d6c5ebefbc727a618b64bfc2a109609ad",
-            input={
-                "image": open(room_image_path, "rb"),
-                "prompt": full_prompt,
-                "negative_prompt": negative_prompt,
-                "num_inference_steps": DEFAULT_INFERENCE_STEPS,
-                "guidance_scale": DEFAULT_GUIDANCE_SCALE,
-                "prompt_strength": DEFAULT_IMAGE_STRENGTH,  # Influence of prompt on transformation
-                "seed": -1  # Random seed
-            }
-        )
+#         # Generate using adirik/interior-design model (img2img inpainting for interior)
+#         output = replicate.run(
+#             "adirik/interior-design:1b976f591a902eb9f897c7c7df9a681d6c5ebefbc727a618b64bfc2a109609ad",
+#             input={
+#                 "image": open(room_image_path, "rb"),
+#                 "prompt": full_prompt,
+#                 "negative_prompt": negative_prompt,
+#                 "num_inference_steps": DEFAULT_INFERENCE_STEPS,
+#                 "guidance_scale": DEFAULT_GUIDANCE_SCALE,
+#                 "prompt_strength": DEFAULT_IMAGE_STRENGTH,  # Influence of prompt on transformation
+#                 "seed": -1  # Random seed
+#             }
+#         )
        
-        # Get output URL
-        output_url = output[0] if isinstance(output, list) else output
+#         # Get output URL
+#         output_url = output[0] if isinstance(output, list) else output
        
-        logger.info(f"✅ Image generated by Replicate: {output_url}")
+#         logger.info(f"✅ Image generated by Replicate: {output_url}")
        
-        # Download generated image
-        logger.info(f"📥 Downloading generated image...")
-        response = requests.get(output_url, timeout=60)
-        response.raise_for_status()
+#         # Download generated image
+#         logger.info(f"📥 Downloading generated image...")
+#         response = requests.get(output_url, timeout=60)
+#         response.raise_for_status()
        
-        # Save to temp file
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_gen:
-            temp_gen.write(response.content)
-            generated_path = temp_gen.name
+#         # Save to temp file
+#         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_gen:
+#             temp_gen.write(response.content)
+#             generated_path = temp_gen.name
        
-        logger.info(f"✅ Generated image saved: {generated_path}")
+#         logger.info(f"✅ Generated image saved: {generated_path}")
        
-        # Cleanup original room image
-        try:
-            os.remove(room_image_path)
-        except:
-            pass
+#         # Cleanup original room image
+#         try:
+#             os.remove(room_image_path)
+#         except:
+#             pass
        
-        return generated_path
+#         return generated_path
        
-    except Exception as e:
-        logger.error(f"❌ Image generation failed: {e}", exc_info=True)
+#     except Exception as e:
+#         logger.error(f"❌ Image generation failed: {e}", exc_info=True)
        
-        # Cleanup
-        try:
-            os.remove(room_image_path)
-        except:
-            pass
+#         # Cleanup
+#         try:
+#             os.remove(room_image_path)
+#         except:
+#             pass
        
-        raise Exception(f"Failed to generate image: {str(e)}")
+#         raise Exception(f"Failed to generate image: {str(e)}")
 
-def _build_generation_prompt(theme: str, furniture_desc: str, user_prompt: str) -> str:
-    """
-    Build detailed prompt for image generation
+# def _build_generation_prompt(theme: str, furniture_desc: str, user_prompt: str) -> str:
+#     """
+#     Build detailed prompt for image generation
    
-    Args:
-        theme: Design theme
-        furniture_desc: Description of furniture items
-        user_prompt: User's placement instructions
+#     Args:
+#         theme: Design theme
+#         furniture_desc: Description of furniture items
+#         user_prompt: User's placement instructions
        
-    Returns:
-        Complete prompt for the model
-    """
-    theme_styles = {
-        "MINIMAL SCANDINAVIAN": "minimalist Scandinavian style, clean lines, natural wood tones, white walls, bright natural lighting",
-        "TIMELESS LUXURY": "luxurious and elegant style, rich materials, sophisticated color palette, ambient lighting",
-        "MODERN LIVING": "contemporary modern style, sleek furniture, neutral colors, sophisticated design",
-        "MODERN MEDITERRANEAN": "Mediterranean style, warm earthy tones, natural textures, bright and airy",
-        "BOHO ECLECTIC": "bohemian eclectic style, mix of patterns and textures, warm colorful accents, relaxed atmosphere"
-    }
+#     Returns:
+#         Complete prompt for the model
+#     """
+#     theme_styles = {
+#         "MINIMAL SCANDINAVIAN": "minimalist Scandinavian style, clean lines, natural wood tones, white walls, bright natural lighting",
+#         "TIMELESS LUXURY": "luxurious and elegant style, rich materials, sophisticated color palette, ambient lighting",
+#         "MODERN LIVING": "contemporary modern style, sleek furniture, neutral colors, sophisticated design",
+#         "MODERN MEDITERRANEAN": "Mediterranean style, warm earthy tones, natural textures, bright and airy",
+#         "BOHO ECLECTIC": "bohemian eclectic style, mix of patterns and textures, warm colorful accents, relaxed atmosphere"
+#     }
    
-    style_desc = theme_styles.get(theme.upper(), "modern contemporary style")
+#     style_desc = theme_styles.get(theme.upper(), "modern contemporary style")
    
-    prompt = f"""
-Professional interior design visualization in {style_desc}.
-Furnish the room with: {furniture_desc}.
-Specific placements: {user_prompt}.
-High quality, photorealistic, 4K resolution, realistic lighting and shadows,
-preserve original room layout and perspective, magazine-quality interior design.
-""".strip()
+#     prompt = f"""
+# Professional interior design visualization in {style_desc}.
+# Furnish the room with: {furniture_desc}.
+# Specific placements: {user_prompt}.
+# High quality, photorealistic, 4K resolution, realistic lighting and shadows,
+# preserve original room layout and perspective, magazine-quality interior design.
+# """.strip()
    
-    return prompt
+#     return prompt
 
-def _build_negative_prompt() -> str:
-    """
-    Build negative prompt to avoid unwanted elements
+# def _build_negative_prompt() -> str:
+#     """
+#     Build negative prompt to avoid unwanted elements
    
-    Returns:
-        Negative prompt string
-    """
-    return """
-blurry, distorted, cartoon, unrealistic, low quality, bad lighting,
-oversaturated, cluttered, messy, unprofessional, amateur, ugly,
-deformed, watermark, text, signature, grainy, pixelated,
-out of focus, poor composition, bad perspective, people, animals
-""".strip()
+#     Returns:
+#         Negative prompt string
+#     """
+#     return """
+# blurry, distorted, cartoon, unrealistic, low quality, bad lighting,
+# oversaturated, cluttered, messy, unprofessional, amateur, ugly,
+# deformed, watermark, text, signature, grainy, pixelated,
+# out of focus, poor composition, bad perspective, people, animals
+# """.strip()
 
 
 
@@ -338,3 +338,225 @@ out of focus, poor composition, bad perspective, people, animals
 # deformed, watermark, text, signature, grainy, pixelated,
 # out of focus, poor composition, bad perspective, people, animals
 # """.strip()
+
+
+
+
+
+
+
+"""
+AI Image Generation Service
+============================
+Handles AI-powered room visualization using Replicate's Interior Design model.
+"""
+import replicate
+import os
+import tempfile
+import requests
+import logging
+from typing import List
+from ai_backend.models import FurnitureItem
+from ai_backend.config import (
+    REPLICATE_API_TOKEN,
+    DEFAULT_IMAGE_STRENGTH,
+    DEFAULT_GUIDANCE_SCALE,
+    DEFAULT_INFERENCE_STEPS
+)
+
+logger = logging.getLogger(__name__)
+
+# Set Replicate API token
+os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
+
+
+def generate_room_with_furniture(
+    room_image_bytes: bytes,
+    prompt: str,
+    theme: str,
+    furniture_items: List[FurnitureItem]
+) -> str:
+    """
+    Generate room image with furniture using Replicate Interior Design model
+   
+    Args:
+        room_image_bytes: Original room photo bytes
+        prompt: User placement instructions
+        theme: Design theme
+        furniture_items: List of selected furniture
+   
+    Returns:
+        Path to generated image file (temporary)
+       
+    Raises:
+        Exception: If generation fails
+    """
+   
+    # Save room image to temp file
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_room:
+        temp_room.write(room_image_bytes)
+        room_image_path = temp_room.name
+   
+    logger.info(f"📁 Room image saved to: {room_image_path}")
+   
+    try:
+        # Build detailed prompt
+        furniture_names = []
+        for item in furniture_items[:5]:  # Max 5 items for token limits
+            # Handle both dict and FurnitureItem objects
+            if isinstance(item, dict):
+                name = item.get('name', '')
+                subtype = item.get('subtype', '')
+            else:
+                name = item.name
+                subtype = getattr(item, 'subtype', '')
+            
+            if subtype:
+                furniture_names.append(f"{name} ({subtype})")
+            else:
+                furniture_names.append(name)
+        
+        furniture_desc = ", ".join(furniture_names)
+       
+        full_prompt = _build_generation_prompt(
+            theme=theme,
+            furniture_desc=furniture_desc,
+            user_prompt=prompt
+        )
+       
+        negative_prompt = _build_negative_prompt()
+       
+        logger.info(f"🎨 Generating image with Replicate...")
+        logger.info(f"   Prompt: {full_prompt[:150]}...")
+        logger.info(f"   Theme: {theme}")
+        logger.info(f"   Furniture items: {len(furniture_items)}")
+        logger.info(f"   Model: adirik/interior-design")
+       
+        # Open file for Replicate API
+        with open(room_image_path, "rb") as image_file:
+            # Generate using adirik/interior-design model
+            output = replicate.run(
+                "adirik/interior-design:1b976f591a902eb9f897c7c7df9a681d6c5ebefbc727a618b64bfc2a109609ad",
+                input={
+                    "image": image_file,
+                    "prompt": full_prompt,
+                    "negative_prompt": negative_prompt,
+                    "num_inference_steps": DEFAULT_INFERENCE_STEPS,
+                    "guidance_scale": DEFAULT_GUIDANCE_SCALE,
+                    "prompt_strength": DEFAULT_IMAGE_STRENGTH,
+                    "seed": -1  # Random seed
+                }
+            )
+       
+        # Handle output (can be a list or single URL)
+        if isinstance(output, list):
+            if len(output) == 0:
+                raise Exception("Replicate returned empty output")
+            output_url = output[0]
+        else:
+            output_url = output
+       
+        logger.info(f"✅ Image generated by Replicate")
+        logger.info(f"   Output URL: {output_url}")
+       
+        # Download generated image
+        logger.info(f"📥 Downloading generated image...")
+        response = requests.get(output_url, timeout=120)  # Increased timeout
+        response.raise_for_status()
+       
+        # Validate response
+        if len(response.content) == 0:
+            raise Exception("Downloaded image is empty")
+       
+        logger.info(f"✅ Downloaded image ({len(response.content) / 1024:.1f} KB)")
+       
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_gen:
+            temp_gen.write(response.content)
+            generated_path = temp_gen.name
+       
+        logger.info(f"✅ Generated image saved: {generated_path}")
+       
+        # Cleanup original room image
+        try:
+            os.remove(room_image_path)
+            logger.debug("🗑️ Cleaned up temporary room image")
+        except Exception as e:
+            logger.warning(f"Could not remove temp file: {e}")
+       
+        return generated_path
+       
+    except replicate.exceptions.ModelError as e:
+        logger.error(f"❌ Replicate model error: {e}")
+        try:
+            os.remove(room_image_path)
+        except:
+            pass
+        raise Exception(f"AI model error: {str(e)}")
+    
+    except replicate.exceptions.ReplicateError as e:
+        logger.error(f"❌ Replicate API error: {e}")
+        try:
+            os.remove(room_image_path)
+        except:
+            pass
+        raise Exception(f"Replicate API error: {str(e)}")
+    
+    except requests.RequestException as e:
+        logger.error(f"❌ Failed to download generated image: {e}")
+        try:
+            os.remove(room_image_path)
+        except:
+            pass
+        raise Exception(f"Failed to download generated image: {str(e)}")
+    
+    except Exception as e:
+        logger.error(f"❌ Image generation failed: {e}", exc_info=True)
+        try:
+            os.remove(room_image_path)
+        except:
+            pass
+        raise Exception(f"Failed to generate image: {str(e)}")
+
+
+def _build_generation_prompt(theme: str, furniture_desc: str, user_prompt: str) -> str:
+    """
+    Build detailed prompt for image generation
+   
+    Args:
+        theme: Design theme
+        furniture_desc: Description of furniture items
+        user_prompt: User's placement instructions
+       
+    Returns:
+        Complete prompt for the model
+    """
+    theme_styles = {
+        "MINIMAL SCANDINAVIAN": "minimalist Scandinavian style with clean lines, natural wood tones, white walls, and bright natural lighting",
+        "TIMELESS LUXURY": "luxurious and elegant style with rich materials, sophisticated color palette, and ambient lighting",
+        "MODERN LIVING": "contemporary modern style with sleek furniture, neutral colors, and sophisticated design",
+        "MODERN MEDITERRANEAN": "Mediterranean style with warm earthy tones, natural textures, and bright airy spaces",
+        "BOHO ECLECTIC": "bohemian eclectic style with mix of patterns and textures, warm colorful accents, and relaxed atmosphere"
+    }
+   
+    style_desc = theme_styles.get(theme.upper(), "modern contemporary style")
+   
+    # Build comprehensive prompt
+    prompt = f"""Professional interior design in {style_desc}.
+Furnish the room with: {furniture_desc}.
+Placement: {user_prompt}.
+High quality, photorealistic, 4K resolution, realistic lighting and shadows, preserve room layout, magazine-quality interior design."""
+   
+    return prompt.strip()
+
+
+def _build_negative_prompt() -> str:
+    """
+    Build negative prompt to avoid unwanted elements
+   
+    Returns:
+        Negative prompt string
+    """
+    return """blurry, distorted, cartoon, unrealistic, low quality, bad lighting, oversaturated, cluttered, 
+messy, unprofessional, amateur, ugly, deformed, watermark, text, signature, grainy, pixelated, 
+out of focus, poor composition, bad perspective, people, animals, multiple rooms, doors, windows changes""".strip()
