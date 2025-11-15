@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
+                                                                                    
 class AWSService:
     """
     AWS S3 operations handler
@@ -21,7 +21,7 @@ class AWSService:
     Provides methods for:
     - Bucket management
     - File upload/download
-    - File deletion
+    - File deletion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
     - Public access configuration
     """
     

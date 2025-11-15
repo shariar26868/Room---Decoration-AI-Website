@@ -186,7 +186,7 @@ async def root():
             "price_range": "/api/furniture/price-range",
             "search": "/api/furniture/search",
             "generate": "/api/generation/generate",
-            "session": "/api/furniture/session/{session_id}"
+            # "session": "/api/furniture/session/{session_id}"
         }
     }
 
